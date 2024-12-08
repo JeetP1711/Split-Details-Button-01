@@ -1,0 +1,188 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Document</title>
+    <style>
+        /* Split Details Button */
+#splitDetailsBtn {
+  padding: 10px 20px;
+  font-size: 16px;
+  background-color: #007bff;
+  color: white;
+  border: none;
+  border-radius: 5px;
+  cursor: pointer;
+  margin-top: 10px;
+}
+
+#splitDetailsBtn:hover {
+  background-color: #0056b3;
+}
+
+/* Split Details Modal */
+.split-details-modal {
+  position: fixed;
+  top: 0;
+  right: -100%;
+  height: 100%;
+  width: 400px;
+  background-color: #ffffff;
+  box-shadow: -2px 0 5px rgba(0, 0, 0, 0.3);
+  transition: right 0.3s ease-in-out;
+  z-index: 1000;
+  padding: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 15px;
+}
+
+.split-details-modal.active {
+  right: 0;
+}
+
+.split-details-content {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.split-details-content input,
+.split-details-content select,
+.split-details-content button {
+  padding: 10px;
+  font-size: 14px;
+  border: 1px solid #ccc;
+  border-radius: 5px;
+}
+
+.split-details-content button {
+  background-color: #007bff;
+  color: white;
+  cursor: pointer;
+}
+
+.split-details-content button:hover {
+  background-color: #0056b3;
+}
+
+    </style>
+</head>
+<body>
+    <!-- Split Details Button -->
+<button id="splitDetailsBtn">Split Details</button>
+
+<!-- Split Details Popup -->
+<div class="split-details-modal" id="splitDetailsModal">
+  <div class="split-details-content">
+    <h2>Split Payment</h2>
+    <label for="payerSelect">Select Payer:</label>
+    <select id="payerSelect">
+      <option value="">Select Member</option>
+    </select>
+
+    <label for="eventDescription">Event Description:</label>
+    <input type="text" id="eventDescription" placeholder="Enter description">
+
+    <label for="totalAmount">Total Amount:</label>
+    <input type="number" id="totalAmount" placeholder="Enter total amount">
+
+    <label for="shareWith">Share With:</label>
+    <div id="shareWithList"></div>
+
+    <button id="calculateSplitBtn">Calculate & Share</button>
+    <button id="closeSplitModalBtn">Close</button>
+  </div>
+</div>
+<script>
+    document.addEventListener("DOMContentLoaded", () => {
+  const splitDetailsBtn = document.getElementById("splitDetailsBtn");
+  const splitDetailsModal = document.getElementById("splitDetailsModal");
+  const closeSplitModalBtn = document.getElementById("closeSplitModalBtn");
+  const payerSelect = document.getElementById("payerSelect");
+  const eventDescription = document.getElementById("eventDescription");
+  const totalAmount = document.getElementById("totalAmount");
+  const shareWithList = document.getElementById("shareWithList");
+  const calculateSplitBtn = document.getElementById("calculateSplitBtn");
+
+  const members = JSON.parse(localStorage.getItem("groupDetails")).members || [];
+
+  // Populate Payer Dropdown and Share List
+  const populateMembers = () => {
+    payerSelect.innerHTML = '<option value="">Select Member</option>';
+    shareWithList.innerHTML = "";
+    members.forEach((member, index) => {
+      // Populate dropdown
+      const option = document.createElement("option");
+      option.value = member.name;
+      option.textContent = member.name;
+      payerSelect.appendChild(option);
+
+      // Populate share list
+      const checkbox = document.createElement("input");
+      checkbox.type = "checkbox";
+      checkbox.value = member.name;
+      checkbox.id = `member-${index}`;
+
+      const label = document.createElement("label");
+      label.textContent = member.name;
+      label.htmlFor = `member-${index}`;
+
+      const div = document.createElement("div");
+      div.appendChild(checkbox);
+      div.appendChild(label);
+
+      shareWithList.appendChild(div);
+    });
+  };
+
+  // Show Split Modal
+  splitDetailsBtn.addEventListener("click", () => {
+    splitDetailsModal.classList.add("active");
+    populateMembers();
+  });
+
+  // Close Split Modal
+  closeSplitModalBtn.addEventListener("click", () => {
+    splitDetailsModal.classList.remove("active");
+  });
+
+  // Calculate Split
+  calculateSplitBtn.addEventListener("click", () => {
+    const payer = payerSelect.value;
+    const description = eventDescription.value.trim();
+    const amount = parseFloat(totalAmount.value);
+    const shareWith = Array.from(
+      shareWithList.querySelectorAll("input[type='checkbox']:checked")
+    ).map((checkbox) => checkbox.value);
+
+    if (!payer || !description || isNaN(amount) || shareWith.length === 0) {
+      alert("Please fill in all fields.");
+      return;
+    }
+
+    const splitAmount = (amount / (shareWith.length + 1)).toFixed(2); // +1 for payer
+    const message = `${payer} owes money from ${shareWith.join(", ")} for ${description} (Amount: ₹${splitAmount} each).`;
+
+    // Add message to chat
+    const newMessage = document.createElement("div");
+    newMessage.classList.add("message");
+    newMessage.textContent = message;
+    document.getElementById("messages").appendChild(newMessage);
+
+    // Generate TXT File
+    const blob = new Blob([message], { type: "text/plain" });
+    const link = document.createElement("a");
+    link.href = URL.createObjectURL(blob);
+    link.download = "split-details.txt";
+    link.click();
+
+    // Close Modal
+    splitDetailsModal.classList.remove("active");
+  });
+});
+
+</script>
+</body>
+</html>
